@@ -123,6 +123,10 @@ namespace Develappers.SageReportGrabber
                     continue;
                 }
 
+                if (currentText == "")
+                {
+                    currentText = null;
+                }
                 propertyInfo.SetValue(result, currentText);
             }
 
