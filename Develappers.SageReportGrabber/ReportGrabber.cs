@@ -64,49 +64,66 @@ namespace Develappers.SageReportGrabber
                     continue;
                 } 
 
-                    var x = (int)(propAttribute.MillimetersX / mmpi * dpi);
-                    var y = (int)(propAttribute.MillimetersY / mmpi * dpi);
-                    var w = (int)(propAttribute.MillimetersWidth / mmpi * dpi);
-                    var h = (int)(propAttribute.MillimetersHeight / mmpi * dpi);
+                var x = (int)(propAttribute.MillimetersX / mmpi * dpi);
+                var y = (int)(propAttribute.MillimetersY / mmpi * dpi);
+                var w = (int)(propAttribute.MillimetersWidth / mmpi * dpi);
+                var h = (int)(propAttribute.MillimetersHeight / mmpi * dpi);
 
-                    var rectangle = new Rectangle(x, y, w, h);
+                var rectangle = new Rectangle(x, y, w, h);
 
-                    IEventFilter[] filter = { new TextRegionEventFilter(rectangle) };
-                    ITextExtractionStrategy strategy = new FilteredTextEventListener(new LocationTextExtractionStrategy(), filter);
-                    var currentText = PdfTextExtractor.GetTextFromPage(page, strategy);
+                IEventFilter[] filter = { new TextRegionEventFilter(rectangle) };
+                ITextExtractionStrategy strategy = new FilteredTextEventListener(new LocationTextExtractionStrategy(), filter);
+                var currentText = PdfTextExtractor.GetTextFromPage(page, strategy);
 
-                    if (propertyInfo.PropertyType == typeof(int))
+                if (propertyInfo.PropertyType == typeof(int))
+                {
+                    var tryParseInt = int.TryParse(currentText, out var currentTextIntPars);
+                    if (tryParseInt)
                     {
-                        var tryParseInt = int.TryParse(currentText, out var currentTextIntPars);
-                        if (tryParseInt)
-                        {
-                            propertyInfo.SetValue(result, currentTextIntPars);
-                        }
-
-                        continue;
+                        propertyInfo.SetValue(result, currentTextIntPars);
                     }
-                    if (propertyInfo.PropertyType == typeof(DateTime))
+
+                    continue;
+                }
+                if (propertyInfo.PropertyType == typeof(DateTime))
+                {
+                    var tryParseDateTime = DateTime.TryParse(currentText, culture, DateTimeStyles.AssumeLocal, out var currentTextDateTimePars);
+                    if (tryParseDateTime)
+                    {
+                        propertyInfo.SetValue(result, currentTextDateTimePars);
+                    }
+
+                    continue;
+                }
+                if (propertyInfo.PropertyType == typeof(decimal))
+                {
+                    var tryParseDec = decimal.TryParse(currentText, NumberStyles.Any, culture, out var currentTextDecPars);
+                    if (tryParseDec)
+                    {
+                        propertyInfo.SetValue(result, currentTextDecPars);
+                    }
+
+                    continue;
+                }
+                if (propertyInfo.PropertyType == typeof(DateTime?))
+                { 
+                    if (currentText == "")
+                    {
+                        propertyInfo.SetValue(result, null);
+                    }
+                    else
                     {
                         var tryParseDateTime = DateTime.TryParse(currentText, culture, DateTimeStyles.AssumeLocal, out var currentTextDateTimePars);
                         if (tryParseDateTime)
                         {
                             propertyInfo.SetValue(result, currentTextDateTimePars);
                         }
-
-                        continue;
-                    }
-                    if (propertyInfo.PropertyType == typeof(decimal))
-                    {
-                        var tryParseDec = decimal.TryParse(currentText, NumberStyles.Any, culture, out var currentTextDecPars);
-                        if (tryParseDec)
-                        {
-                            propertyInfo.SetValue(result, currentTextDecPars);
-                        }
-
-                        continue;
                     }
 
-                    propertyInfo.SetValue(result, currentText);
+                    continue;
+                }
+
+                propertyInfo.SetValue(result, currentText);
             }
 
             return result;
