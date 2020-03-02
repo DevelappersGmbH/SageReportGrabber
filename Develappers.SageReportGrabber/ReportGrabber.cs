@@ -28,14 +28,14 @@ namespace Develappers.SageReportGrabber
             for (var page = 1; page <= pdfDoc.GetNumberOfPages(); page++)
             {
                 var pg = pdfDoc.GetPage(page);
-                var grabbedPage = Extract(pg);
+                var grabbedPage = Extract<MitarbeiterStammdatenblatt>(pg);
                 grabbedPages.Add(grabbedPage);
             }
 
             return grabbedPages;
         }
 
-        private static MitarbeiterStammdatenblatt Extract(PdfPage page)
+        private static T Extract<T>(PdfPage page)
         {
             var culture = CultureInfo.GetCultureInfo("de-DE");
 
@@ -47,10 +47,9 @@ namespace Develappers.SageReportGrabber
             const int dpi = 72;
             const double mmpi = 25.4d;
 
-            var result = new MitarbeiterStammdatenblatt();
+            var result = (T)Activator.CreateInstance(typeof(T));
+            var properties = typeof(T).GetProperties();
 
-            var t = result.GetType();
-            var properties = t.GetProperties();
 
             foreach (var propertyInfo in properties)
             {
