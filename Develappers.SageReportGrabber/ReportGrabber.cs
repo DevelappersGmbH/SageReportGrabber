@@ -74,6 +74,9 @@ namespace Develappers.SageReportGrabber
                 ITextExtractionStrategy strategy = new FilteredTextEventListener(new LocationTextExtractionStrategy(), filter);
                 var currentText = PdfTextExtractor.GetTextFromPage(page, strategy);
 
+                //currentText can´t be null because it gets back a String
+                currentText = currentText.Trim();
+
                 if (propertyInfo.PropertyType == typeof(int))
                 {
                     var tryParseInt = int.TryParse(currentText, out var currentTextIntPars);
