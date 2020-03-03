@@ -14,9 +14,15 @@ namespace Develappers.SageReportGrabber
 {
     public class ReportGrabber
     {
-        const int dpi = 72;
-        const double mmpi = 25.4d;
+        //needed for the conversion from millimeters to dots
+        const int dpi = 72; //dots per inch
+        const double mmpi = 25.4d; //millimeters per inch
 
+        /// <summary>
+        /// Grabs the <see cref="Lohnkonto"/> data from a PDF document.
+        /// </summary>
+        /// <param name="stream">Contains the PDF document.</param>
+        /// <returns>The list of <see cref="Lohnkonto"/></returns>
         public List<Lohnkonto> GrabLohnkonto(Stream stream)
         {
             if (stream == null)
@@ -75,6 +81,11 @@ namespace Develappers.SageReportGrabber
             return mitarbeiterList;
         }
 
+        /// <summary>
+        /// Grabs the <see cref="MitarbeiterStammdatenblatt"/> data from a PDF document
+        /// </summary>
+        /// <param name="stream">Contains the PDF document.</param>
+        /// <returns>A list of Stammdatenblätter.</returns>
         public List<MitarbeiterStammdatenblatt> GrabMitarbeiterStammdatenblatt(Stream stream)
         {
             if (stream == null)
@@ -95,6 +106,7 @@ namespace Develappers.SageReportGrabber
 
             return grabbedPages;
         }
+
         /// <summary>
         /// Gets the Text at a Position in the PDF
         /// </summary>
@@ -103,7 +115,7 @@ namespace Develappers.SageReportGrabber
         /// <param name="y">y position in mm</param>
         /// <param name="w">width in mm</param>
         /// <param name="h">height in mm</param>
-        /// <returns></returns>
+        /// <returns>The extracted text.</returns>
         private static string GetTextAtPosition(PdfPage page, int x, int y, int w, int h)
         {
             var xInDots = (int)(x / mmpi * dpi);
@@ -123,7 +135,14 @@ namespace Develappers.SageReportGrabber
             return currentText;
         }
 
-        private static T Extract<T>(PdfPage page, int xOffset = 0, int yOffset = 0)
+        /// <summary>
+        /// Extracts all data marked with <see cref="DocumentLocationAttribute"/> from the PDF page.
+        /// </summary>
+        /// <typeparam name="T">The result type.</typeparam>
+        /// <param name="page">The PDF page.</param>
+        /// <param name="xOffset">The offset which is added to the x value defined in <see cref="DocumentLocationAttribute"/></param>
+        /// <returns>The type defined in T.</returns>
+        private static T Extract<T>(PdfPage page, int xOffset = 0)
         {
             var culture = CultureInfo.GetCultureInfo("de-DE");
 
@@ -146,11 +165,11 @@ namespace Develappers.SageReportGrabber
                 {
                     continue;
                 }
-                
+
                 var currentText = GetTextAtPosition(page, propAttribute.MillimetersX + xOffset,
-                    propAttribute.MillimetersY + yOffset, propAttribute.MillimetersWidth,
+                    propAttribute.MillimetersY, propAttribute.MillimetersWidth,
                     propAttribute.MillimetersHeight);
-                
+
                 if (propertyInfo.PropertyType == typeof(int))
                 {
                     var tryParseInt = int.TryParse(currentText, out var currentTextIntPars);
@@ -182,7 +201,7 @@ namespace Develappers.SageReportGrabber
                     continue;
                 }
                 if (propertyInfo.PropertyType == typeof(DateTime?))
-                { 
+                {
                     if (currentText == "")
                     {
                         propertyInfo.SetValue(result, null);
