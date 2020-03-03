@@ -14,6 +14,67 @@ namespace Develappers.SageReportGrabber
 {
     public class ReportGrabber
     {
+        const int dpi = 72;
+        const double mmpi = 25.4d;
+
+        public List<Lohnkonto> GrabLohnkonto(Stream stream)
+        {
+            if (stream == null)
+            {
+                throw new ArgumentNullException(nameof(stream), $"{nameof(stream)} must not be null");
+            }
+
+            var pdfDoc = new PdfDocument(new PdfReader(stream));
+
+            var mitarbeiterList = new List<Lohnkonto>();
+
+
+            for (var pageIndex = 1; pageIndex <= pdfDoc.GetNumberOfPages(); pageIndex++)
+            {
+                var page = pdfDoc.GetPage(pageIndex);
+                var pageWidth = page.GetPageSize().GetWidth() / dpi * mmpi;
+
+                //Vergleich an bestimmter Position, ob text vorhanden ist, wenn nicht dann continue
+                if (GetTextAtPosition(page, 13, 15, 5, 3) != "Status")
+                {
+                    continue;
+                }
+
+                var mitarbeiter = Extract<Lohnkonto>(page);
+
+                var mitarbeiterPersonalnummer =
+                    mitarbeiterList.SingleOrDefault(x => x.Personalnummer == mitarbeiter.Personalnummer);
+
+                if (mitarbeiterPersonalnummer != null)
+                {
+                    mitarbeiter = mitarbeiterPersonalnummer;
+                }
+                else
+                {
+                    mitarbeiterList.Add(mitarbeiter);
+                    mitarbeiter.Monate = new List<LohnkontoMonat>();
+                }
+
+                for (int offset = 0; offset < (int)pageWidth; offset += 26)
+                {
+                    var res = Extract<LohnkontoMonat>(page, offset);
+                    if (string.IsNullOrEmpty(res.Abrechnungsmonat))
+                    {
+                        break;
+                    }
+                    if (res.Status == "Vortragswerte" || res.Status == "Summen")
+                    {
+                        continue;
+                    }
+
+                    mitarbeiter.Monate.Add(res);
+                }
+
+            }
+
+            return mitarbeiterList;
+        }
+
         public List<MitarbeiterStammdatenblatt> GrabMitarbeiterStammdatenblatt(Stream stream)
         {
             if (stream == null)
@@ -34,8 +95,35 @@ namespace Develappers.SageReportGrabber
 
             return grabbedPages;
         }
+        /// <summary>
+        /// Gets the Text at a Position in the PDF
+        /// </summary>
+        /// <param name="page"></param>
+        /// <param name="x">x position in mm</param>
+        /// <param name="y">y position in mm</param>
+        /// <param name="w">width in mm</param>
+        /// <param name="h">height in mm</param>
+        /// <returns></returns>
+        private static string GetTextAtPosition(PdfPage page, int x, int y, int w, int h)
+        {
+            var xInDots = (int)(x / mmpi * dpi);
+            var yInDots = (int)(y / mmpi * dpi);
+            var wInDots = (int)(w / mmpi * dpi);
+            var hInDots = (int)(h / mmpi * dpi);
 
-        private static T Extract<T>(PdfPage page)
+            var rectangle = new Rectangle(xInDots, yInDots, wInDots, hInDots);
+
+            IEventFilter[] filter = { new TextRegionEventFilter(rectangle) };
+            ITextExtractionStrategy strategy = new FilteredTextEventListener(new LocationTextExtractionStrategy(), filter);
+            var currentText = PdfTextExtractor.GetTextFromPage(page, strategy);
+
+            //currentText cant be null because it gets back an String
+            currentText = currentText.Trim();
+
+            return currentText;
+        }
+
+        private static T Extract<T>(PdfPage page, int xOffset = 0, int yOffset = 0)
         {
             var culture = CultureInfo.GetCultureInfo("de-DE");
 
@@ -44,12 +132,8 @@ namespace Develappers.SageReportGrabber
                 throw new ArgumentNullException(nameof(page), "Page must not be null");
             }
 
-            const int dpi = 72;
-            const double mmpi = 25.4d;
-
             var result = (T)Activator.CreateInstance(typeof(T));
             var properties = typeof(T).GetProperties();
-
 
             foreach (var propertyInfo in properties)
             {
@@ -61,19 +145,12 @@ namespace Develappers.SageReportGrabber
                 if (propAttribute == null)
                 {
                     continue;
-                } 
-
-                var x = (int)(propAttribute.MillimetersX / mmpi * dpi);
-                var y = (int)(propAttribute.MillimetersY / mmpi * dpi);
-                var w = (int)(propAttribute.MillimetersWidth / mmpi * dpi);
-                var h = (int)(propAttribute.MillimetersHeight / mmpi * dpi);
-
-                var rectangle = new Rectangle(x, y, w, h);
-
-                IEventFilter[] filter = { new TextRegionEventFilter(rectangle) };
-                ITextExtractionStrategy strategy = new FilteredTextEventListener(new LocationTextExtractionStrategy(), filter);
-                var currentText = PdfTextExtractor.GetTextFromPage(page, strategy);
-
+                }
+                
+                var currentText = GetTextAtPosition(page, propAttribute.MillimetersX + xOffset,
+                    propAttribute.MillimetersY + yOffset, propAttribute.MillimetersWidth,
+                    propAttribute.MillimetersHeight);
+                
                 if (propertyInfo.PropertyType == typeof(int))
                 {
                     var tryParseInt = int.TryParse(currentText, out var currentTextIntPars);
@@ -126,6 +203,7 @@ namespace Develappers.SageReportGrabber
                 {
                     currentText = null;
                 }
+
                 propertyInfo.SetValue(result, currentText);
             }
 
