@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <Version>0.1.0-alpha</Version>
+    <Version>0.1.1-alpha</Version>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
     <PackageIcon>icon.png</PackageIcon>
     <PackageIconUrl />

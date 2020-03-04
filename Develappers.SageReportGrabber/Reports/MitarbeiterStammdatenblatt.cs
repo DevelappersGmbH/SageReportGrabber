@@ -125,7 +125,7 @@ namespace Develappers.SageReportGrabber.Reports
         public string Bundesland { get; set; }
 
         [DocumentLocation(100, 36, 4, 30)]
-        public DateTime Austritt { get; set; }
+        public DateTime? Austritt { get; set; }
 
         [DocumentLocation(45, 19, 4, 25)]
         public string BerufsgenossenschaftUnternehmenszweig { get; set; }
